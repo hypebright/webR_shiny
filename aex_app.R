@@ -10,8 +10,8 @@ getStockData <- function(symbol, start_date, end_date) {
                 as.numeric(as.POSIXct(start_date)), "&period2=", as.numeric(as.POSIXct(end_date)), 
                 "&interval=1d")
   
-  response <- httr::GET(url)
-  json_data <- jsonlite::fromJSON(httr::content(response, as = "text"))
+  response <- GET(url)
+  json_data <- fromJSON(content(response, as = "text"))
   prices <- json_data$chart$result$indicators$quote[[1]]$close[[1]]
   dates <- as.Date(as.POSIXct(json_data$chart$result$timestamp[[1]], origin = "1970-01-01"))
   
