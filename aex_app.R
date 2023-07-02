@@ -37,6 +37,8 @@ ui <- fluidPage(
 # Define server
 server <- function(input, output) {
   
+  print("running server")
+  
   # Retrieve stock data
   stockData <- reactive({
     ticker <- input$company
@@ -59,4 +61,4 @@ server <- function(input, output) {
 }
 
 # Run the application
-shinyApp(ui = ui, server = server)
+runApp(shinyApp(ui = ui, server = server))
