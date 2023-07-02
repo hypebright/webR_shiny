@@ -1,20 +1,4 @@
 
-# Function to check if a package is installed
-isPackageInstalled <- function(package) {
-  return(package %in% installed.packages())
-}
-
-# Function to install a package if it is not already installed
-installPackageIfNeeded <- function(package) {
-  if (!isPackageInstalled(package)) {
-    install.packages(package, repos = 'https://repo.r-wasm.org/')
-  }
-}
-
-# Check and install packages if needed
-packages <- c("jsonlite", "shiny", "httr", "ggplot2")
-lapply(packages, installPackageIfNeeded)
-
 library(shiny)
 library(httr)
 library(jsonlite)
