@@ -7,7 +7,7 @@ isPackageInstalled <- function(package) {
 # Function to install a package if it is not already installed
 installPackageIfNeeded <- function(package) {
   if (!isPackageInstalled(package)) {
-    install.packages(package, repos = repos = 'https://repo.r-wasm.org/')
+    install.packages(package, repos = 'https://repo.r-wasm.org/')
   }
 }
 
