@@ -36,8 +36,6 @@ ui <- fluidPage(
 # Define server
 server <- function(input, output) {
   
-  print("running Shiny app server")
-  
   # Retrieve stock data
   stockData <- reactive({
     ticker <- input$company
@@ -48,15 +46,17 @@ server <- function(input, output) {
   # Plot stock data
   output$stock_plot <- renderPlot({
     
-    stock <- stockData()
+    req(stockData)
     
-    plot(x = stock$Date, 
-         y = stock$Close, 
+    thisStock <- stockData()
+    
+    plot(x = thisStock$Date, 
+         y = thisStock$Close, 
          type = "l", 
          col = "steelblue",
          xlab = "Date", 
          ylab = "Closing Price",
-         main = paste("Stock Data for", stock$ticker))
+         main = paste("Stock Data for", thisStock$ticker))
     
   })
 }
