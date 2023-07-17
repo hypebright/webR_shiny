@@ -56,7 +56,7 @@ server <- function(input, output) {
          col = "steelblue",
          xlab = "Date", 
          ylab = "Closing Price",
-         main = paste("Stock Data for", input$company))
+         main = paste("Stock Data for", stock$ticker))
     
   })
 }
