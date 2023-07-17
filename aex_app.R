@@ -2,7 +2,6 @@
 library(shiny)
 library(httr)
 library(jsonlite)
-library(ggplot2)
 
 # Function to retrieve stock data
 getStockData <- function(symbol, start_date, end_date) {
@@ -37,7 +36,7 @@ ui <- fluidPage(
 # Define server
 server <- function(input, output) {
   
-  print("running server")
+  print("running Shiny app server")
   
   # Retrieve stock data
   stockData <- reactive({
@@ -51,11 +50,13 @@ server <- function(input, output) {
     
     stock <- stockData()
     
-    ggplot(stock, aes(x = Date, y = Close)) +
-      geom_line(color = "steelblue") +
-      labs(x = "Date", y = "Closing Price") +
-      ggtitle(paste("Stock Data for", input$company)) +
-      theme_minimal()
+    plot(x = stock$Date, 
+         y = stock$Close, 
+         type = "l", 
+         col = "steelblue",
+         xlab = "Date", 
+         ylab = "Closing Price",
+         main = paste("Stock Data for", input$company))
     
   })
 }
