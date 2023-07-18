@@ -25,6 +25,9 @@ server <- function(input, output) {
     ticker <- input$company
     dates <- input$dates
     
+    print(ticker)
+    print(dates)
+    
     url <- paste0(
       "https://query1.finance.yahoo.com/v8/finance/chart/",
       ticker,
@@ -35,7 +38,11 @@ server <- function(input, output) {
       "&interval=1d"
     )
     
+    print(url)
+    
     json_data <- jsonlite::fromJSON(url)
+    
+    print(json_data)
     
     prices <- json_data$chart$result$indicators$quote[[1]]$close[[1]]
     dates <- as.Date(as.POSIXct(json_data$chart$result$timestamp[[1]], origin = "1970-01-01"))
