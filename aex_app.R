@@ -19,8 +19,8 @@ ui <- fluidPage(
 # Define server
 server <- function(input, output) {
   
-  # Retrieve stock data
-  stockData <- reactive({
+  # Plot stock data
+  output$stock_plot <- renderPlot({
     
     ticker <- input$company
     dates <- input$dates
@@ -47,24 +47,15 @@ server <- function(input, output) {
     prices <- json_data$chart$result$indicators$quote[[1]]$close[[1]]
     dates <- as.Date(as.POSIXct(json_data$chart$result$timestamp[[1]], origin = "1970-01-01"))
     
-    data.frame(Date = dates, Close = prices, stringsAsFactors = FALSE)
+    stock_data <- data.frame(Date = dates, Close = prices, stringsAsFactors = FALSE)
     
-  })
-  
-  # Plot stock data
-  output$stock_plot <- renderPlot({
-    
-    req(stockData)
-    
-    thisStock <- stockData()
-    
-    plot(x = thisStock$Date, 
-         y = thisStock$Close, 
+    plot(x = stock_data$Date, 
+         y = stock_data$Close, 
          type = "l", 
          col = "steelblue",
          xlab = "Date", 
          ylab = "Closing Price",
-         main = paste("Stock Data for", thisStock$ticker))
+         main = paste("Stock Data for", ticker))
     
   })
 }
