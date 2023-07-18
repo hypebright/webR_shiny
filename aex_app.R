@@ -25,26 +25,22 @@ server <- function(input, output) {
     ticker <- input$company
     dates <- input$dates
     
-    getStockData <- function(symbol, start_date, end_date) {
-      url <- paste0(
-        "https://query1.finance.yahoo.com/v8/finance/chart/",
-        symbol,
-        "?period1=",
-        as.numeric(as.POSIXct(start_date)),
-        "&period2=",
-        as.numeric(as.POSIXct(end_date)),
-        "&interval=1d"
-      )
-      
-      json_data <- jsonlite::fromJSON(url)
-      
-      prices <- json_data$chart$result$indicators$quote[[1]]$close[[1]]
-      dates <- as.Date(as.POSIXct(json_data$chart$result$timestamp[[1]], origin = "1970-01-01"))
-      
-      data.frame(Date = dates, Close = prices, stringsAsFactors = FALSE)
-    }
+    url <- paste0(
+      "https://query1.finance.yahoo.com/v8/finance/chart/",
+      ticker,
+      "?period1=",
+      as.numeric(as.POSIXct(dates[1])),
+      "&period2=",
+      as.numeric(as.POSIXct(dates[2])),
+      "&interval=1d"
+    )
     
-    getStockData(ticker, dates[1], dates[2])
+    json_data <- jsonlite::fromJSON(url)
+    
+    prices <- json_data$chart$result$indicators$quote[[1]]$close[[1]]
+    dates <- as.Date(as.POSIXct(json_data$chart$result$timestamp[[1]], origin = "1970-01-01"))
+    
+    data.frame(Date = dates, Close = prices, stringsAsFactors = FALSE)
     
   })
   
