@@ -1,6 +1,4 @@
-
 library(shiny)
-library(httr)
 library(jsonlite)
 
 # Define UI
