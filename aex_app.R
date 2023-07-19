@@ -42,6 +42,8 @@ server <- function(input, output) {
     # Append the callback function to the URL as a query parameter
     jsonp_url <- paste0(url, "&format=json&callback=", callback)
     
+    print(jsonp_url)
+    
     # Perform the JSONP request
     jsonp_response <- GET(jsonp_url)
     
@@ -53,11 +55,15 @@ server <- function(input, output) {
     # Parse the JSON data
     parsed_data <- fromJSON(json_data)
     
+    print(parsed_data)
+    
     # Extract the necessary data from the parsed JSON
     prices <- parsed_data$chart$result$indicators$quote[[1]]$close[[1]]
     dates <- as.Date(as.POSIXct(parsed_data$chart$result$timestamp[[1]], origin = "1970-01-01"))
     
     stock_data <- data.frame(Date = dates, Close = prices, stringsAsFactors = FALSE)
+    
+    print(stock_data)
     
     plot(x = stock_data$Date, 
          y = stock_data$Close, 
