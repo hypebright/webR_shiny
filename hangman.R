@@ -1,21 +1,24 @@
 library(shiny)
 
 # Define a list of words for the game
-words <- c("hangman", "computer", "programming", "openai", "shiny", "game")
+words <- c("hangman", "programming", "shiny", "webr", "webassembly", "serviceworker")
 
 ui <- fluidPage(
+  
   titlePanel("Hangman Game"),
   
   mainPanel(
     h3("Guess the word!"),
-    verbatimTextOutput("word_display"),
+    textOutput("word_display"),
+    br(),
     textInput("guess_input", "Enter a letter:"),
-    actionButton("guess_button", "Guess"),
+    actionButton("guess_button", icon = icon("lightbulb"), "Guess"),
     br(),
     h4("Incorrect Guesses:"),
-    verbatimTextOutput("incorrect_guesses"),
+    textOutput("incorrect_guesses"),
+    br(),
     h4("Remaining Chances:"),
-    verbatimTextOutput("remaining_chances")
+    textOutput("remaining_chances")
   )
 )
 
@@ -56,7 +59,7 @@ server <- function(input, output) {
   })
   
   # Function to display the word with guessed letters filled in
-  output$word_display <- renderPrint({
+  output$word_display <- renderText({
     word <- game_state$word
     guessed_letters <- game_state$guessed_letters
     
@@ -68,16 +71,20 @@ server <- function(input, output) {
       }
     })
     
-    cat(paste(displayed_word, collapse = " "))
+    paste(displayed_word, collapse = " ")
   })
   
   # Display incorrect guesses
-  output$incorrect_guesses <- renderPrint({
-    cat(paste(game_state$guessed_letters[!(game_state$guessed_letters %in% strsplit(game_state$word, "")[[1]])], collapse = ", "))
+  output$incorrect_guesses <- renderText({
+    if(length(game_state$guessed_letters) == 0){
+      "No incorrect guesses yet 👀 "
+    } else {
+      paste(game_state$guessed_letters[!(game_state$guessed_letters %in% strsplit(game_state$word, "")[[1]])], collapse = ", ")
+    }
   })
   
   # Display remaining chances
-  output$remaining_chances <- renderPrint({
+  output$remaining_chances <- renderText({
     game_state$remaining_chances - game_state$incorrect_guesses
   })
   
