@@ -1,5 +1,6 @@
 
 library(shiny)
+library(httr)
 library(jsonlite)
 
 # Define UI
@@ -25,9 +26,6 @@ server <- function(input, output) {
     ticker <- input$company
     dates <- input$dates
     
-    print(ticker)
-    print(dates)
-    
     url <- paste0(
       "https://query1.finance.yahoo.com/v8/finance/chart/",
       ticker,
@@ -38,14 +36,26 @@ server <- function(input, output) {
       "&interval=1d"
     )
     
-    print(url)
+    # Generate a unique callback function name
+    callback <- paste0("callback", as.integer(Sys.time()))
     
-    json_data <- jsonlite::fromJSON(url)
+    # Append the callback function to the URL as a query parameter
+    jsonp_url <- paste0(url, "&format=json&callback=", callback)
     
-    print(json_data)
+    # Perform the JSONP request
+    jsonp_response <- GET(jsonp_url)
     
-    prices <- json_data$chart$result$indicators$quote[[1]]$close[[1]]
-    dates <- as.Date(as.POSIXct(json_data$chart$result$timestamp[[1]], origin = "1970-01-01"))
+    # Extract the JSON data by removing the callback function wrapper
+    json_data <- content(jsonp_response, "text", encoding = "UTF-8")
+    json_data <- gsub(paste0("^", callback, "\\("), "", json_data)
+    json_data <- gsub("\\)$", "", json_data)
+    
+    # Parse the JSON data
+    parsed_data <- fromJSON(json_data)
+    
+    # Extract the necessary data from the parsed JSON
+    prices <- parsed_data$chart$result$indicators$quote[[1]]$close[[1]]
+    dates <- as.Date(as.POSIXct(parsed_data$chart$result$timestamp[[1]], origin = "1970-01-01"))
     
     stock_data <- data.frame(Date = dates, Close = prices, stringsAsFactors = FALSE)
     
