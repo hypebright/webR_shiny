@@ -50,8 +50,6 @@ server <- function(input, output) {
     # Parse JSON data
     parsed_data <- fromJSON("stockdata.json")
     
-    print(parsed_data)
-    
     # Extract the necessary data from the parsed JSON
     prices <- parsed_data$chart$result$indicators$quote[[1]]$close[[1]]
     dates <- as.Date(as.POSIXct(parsed_data$chart$result$timestamp[[1]], origin = "1970-01-01"))
