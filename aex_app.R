@@ -42,16 +42,13 @@ server <- function(input, output) {
     
     print(jsonp_url)
     
-    # Perform the JSONP request
-    jsonp_response <- GET(jsonp_url)
+    # Download data
+    download.file(jsonp_url, "stockdata.json")
     
-    # Extract the JSON data by removing the callback function wrapper
-    json_data <- content(jsonp_response, "text", encoding = "UTF-8")
-    json_data <- gsub(paste0("^", callback, "\\("), "", json_data)
-    json_data <- gsub("\\)$", "", json_data)
+    print(list.files())
     
-    # Parse the JSON data
-    parsed_data <- fromJSON(json_data)
+    # Parse JSON data
+    parsed_data <- fromJSON("stockdata.json")
     
     print(parsed_data)
     
