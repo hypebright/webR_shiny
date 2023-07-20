@@ -12,17 +12,22 @@ ui <- fluidPage(
     textOutput("word_display"),
     br(),
     textInput("guess_input", "Enter a letter:"),
-    actionButton("guess_button", icon = icon("lightbulb"), "Guess"),
+    tagAppendAttributes(style = "background-color:steelblue;color:white;",
+                        actionButton("guess_button", icon = icon("lightbulb"), "Guess")),
+    br(),
     br(),
     h4("Incorrect Guesses:"),
     textOutput("incorrect_guesses"),
     br(),
     h4("Remaining Chances:"),
-    textOutput("remaining_chances")
+    textOutput("remaining_chances"),
+    br(),
+    tagAppendAttributes(style = "background-color:orange;color:white;",
+                        actionButton("reset_button", icon = icon("redo"), "Reset"))
   )
 )
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   # Initialize game state
   game_state <- reactiveValues(
     word = sample(words, 1),  # Randomly select a word from the list
@@ -32,7 +37,8 @@ server <- function(input, output) {
   )
   
   # Function to update game state based on user guess
-  updateGameState <- function() {
+  update_game_state <- function() {
+    
     guess <- tolower(substr(input$guess_input, 1, 1))  # Extract first character of user's guess
     
     if (guess %in% game_state$guessed_letters) {
@@ -55,7 +61,7 @@ server <- function(input, output) {
   
   # Action when the guess button is clicked
   observeEvent(input$guess_button, {
-    updateGameState()
+    update_game_state()
   })
   
   # Function to display the word with guessed letters filled in
@@ -101,6 +107,19 @@ server <- function(input, output) {
     game_state$guessed_letters <- character(0)
     game_state$incorrect_guesses <- 0
   }
+  
+  observeEvent(input$reset_button, {
+    
+    game_state$word <- sample(words, 1)
+    game_state$guessed_letters <- character(0)
+    game_state$incorrect_guesses <- 0
+    game_state$remaining_chances <- 7
+    
+    updateTextInput(session = session,
+                    inputId = "guess_input",
+                    value = "")
+    
+  })
 }
 
 shinyApp(ui, server)
