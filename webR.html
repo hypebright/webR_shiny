@@ -1,0 +1,226 @@
+<button class="btn btn-success btn-sm" type="button" style="background-color: dodgerblue" id="statusButton">
+  <i class="fas fa-spinner fa-spin"></i>
+  Loading webR...
+</button>
+<div id="iframeContainer"></div>
+<script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js" integrity="sha384-rOA1PnstxnOBLzCLMcre8ybwbTmemjzdNlILg8O7z1lUkLXozs4DHonlDtnE7fpc" crossorigin="anonymous"></script>
+<script type="module">
+
+  import { WebR } from 'https://webr.r-wasm.org/v0.1.1/webr.mjs';
+
+  const webR = new WebR();
+
+  const shinyScriptURL = 'https://raw.githubusercontent.com/hypebright/webR_shiny/main/hangman.R'
+  const shinyScriptName = 'app.R'
+
+  let webSocketHandleCounter = 0;
+  let webSocketRefs = {};
+
+
+  const loadShiny = async () => {
+    try {
+
+      document.getElementById('statusButton').innerHTML = `
+        <i class="fas fa-spinner fa-spin"></i>
+        Setting up websocket proxy and register service worker
+      `;
+
+      // Create a proxy WebSocket class to intercept WebSocket API calls inside the
+      // Shiny iframe and forward the messages to webR over the communication channel.
+      class WebSocketProxy {
+        url;
+        handle;
+        bufferedAmount;
+        readyState;
+        constructor(_url) {
+          this.url = _url
+          this.handle = webSocketHandleCounter++;
+          this.bufferedAmount = 0;
+          this.shelter = null;
+          webSocketRefs[this.handle] = this;
+
+          // Trigger the WS onOpen callbacks
+          webR.evalRVoid(`
+                        onWSOpen <- options('webr_httpuv_onWSOpen')[[1]]
+                        if (!is.null(onWSOpen)) {
+                          onWSOpen(
+                            ${this.handle},
+                            list(
+                              handle = ${this.handle}
+                            )
+                          )
+                        }
+                        `)
+
+          setTimeout(() => {
+            this.readyState = 1;
+            this.onopen()
+          }, 0);
+        }
+
+        async send(msg) {
+          // Intercept WS message and send it via the webR channel
+          webR.evalRVoid(`
+                        onWSMessage <- options('webr_httpuv_onWSMessage')[[1]]
+                        if (!is.null(onWSMessage)) {
+                          onWSMessage(${this.handle}, FALSE, '${msg}')
+                        }
+                        `)
+        }
+      }
+
+      await webR.init();
+      console.log('webR ready');
+
+      // Read webR channel for events
+      (async () => {
+        for (; ;) {
+          const output = await webR.read();
+          switch (output.type) {
+            case 'stdout':
+              console.log(output.data)
+              break;
+            case 'stderr':
+              console.log(output.data)
+              break;
+            case '_webR_httpuv_TcpResponse':
+              const registration = await navigator.serviceWorker.getRegistration();
+              registration.active.postMessage({
+                type: "wasm-http-response",
+                uuid: output.uuid,
+                response: output.data,
+              });
+              break;
+            case '_webR_httpuv_WSResponse':
+              const event = { data: output.data.message };
+              webSocketRefs[output.data.handle].onmessage(event);
+              console.log(event)
+              break;
+          }
+        }
+      })();
+
+      // Register service worker: note that this script needs to be uploaded to your site
+      const registration = await navigator.serviceWorker.register('/httpuv-serviceworker.js', { scope: '/' })
+        .catch((error) => {
+          console.error('Service worker registration error:', error);
+        });
+
+      // Handy for trouble shooting
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration()
+          .then((registration) => {
+            if (registration) {
+              const scope = registration.scope;
+              console.log('Service worker scope:', scope);
+            } else {
+              console.log('No registered service worker found.');
+            }
+          })
+          .catch((error) => {
+            console.error('Error retrieving service worker registration:', error);
+          });
+      } else {
+        console.log('Service workers not supported.');
+      }
+
+      await navigator.serviceWorker.ready;
+      window.addEventListener('beforeunload', async () => {
+        await registration.unregister();
+      });
+      console.log("service worker registered");
+
+      document.getElementById('statusButton').innerHTML = `
+        <i class="fas fa-spinner fa-spin"></i>
+        Downloading R script...
+      `;
+      await webR.evalR("download.file('" + shinyScriptURL + "', '" + shinyScriptName + "')");
+      console.log("file downloaded");
+
+      document.getElementById('statusButton').innerHTML = `
+        <i class="fas fa-spinner fa-spin"></i>
+        Installing packages...
+      `;
+      await webR.installPackages(["shiny", "jsonlite"])
+
+      document.getElementById('statusButton').innerHTML = `
+        <i class="fas fa-spinner fa-spin"></i>
+        Loading app...
+      `;
+
+      webR.writeConsole(`
+          library(shiny)
+          runApp('` + shinyScriptName + `')
+      `);
+
+      // Setup listener for service worker messages
+      navigator.serviceWorker.addEventListener('message', async (event) => {
+        if (event.data.type === 'wasm-http-fetch') {
+          var url = new URL(event.data.url);
+          var pathname = url.pathname.replace(/.*\/__wasm__\/([0-9a-fA-F-]{36})/, "");
+          var query = url.search.replace(/^\?/, '');
+          webR.evalRVoid(`
+                     onRequest <- options("webr_httpuv_onRequest")[[1]]
+                     if (!is.null(onRequest)) {
+                       onRequest(
+                         list(
+                           PATH_INFO = "${pathname}",
+                           REQUEST_METHOD = "${event.data.method}",
+                           UUID = "${event.data.uuid}",
+                           QUERY_STRING = "${query}"
+                         )
+                       )
+                     }
+                     `);
+        }
+      });
+
+      // Register with service worker and get our client ID
+      const clientId = await new Promise((resolve) => {
+        navigator.serviceWorker.addEventListener('message', function listener(event) {
+          if (event.data.type === 'registration-successful') {
+            navigator.serviceWorker.removeEventListener('message', listener);
+            resolve(event.data.clientId);
+            console.log("event data:")
+            console.log(event.data)
+          }
+        });
+        registration.active.postMessage({ type: "register-client" });
+      });
+      console.log('I am client: ', clientId);
+      console.log("serviceworker proxy is ready");
+
+      // Load the WASM httpuv hosted page in an iframe
+      const containerDiv = document.getElementById('iframeContainer');
+      let iframe = document.createElement('iframe');
+      iframe.id = 'app';
+      iframe.src = `./__wasm__/${clientId}/`;
+      iframe.frameBorder = '0';
+      iframe.style.width = '100%';
+      iframe.style.height = '600px'; // Adjust the height as needed
+      iframe.style.overflow = 'auto';
+      containerDiv.appendChild(iframe);
+
+      // Install the websocket proxy for chatting to httpuv
+      iframe.contentWindow.WebSocket = WebSocketProxy;
+
+      document.getElementById('statusButton').innerHTML = `
+          <i class="fas fa-check-circle"></i>
+          App loaded!
+      `;
+      document.getElementById('statusButton').style.backgroundColor = 'green';
+      console.log("App loaded!");
+
+    } catch (error) {
+      console.log("Error:", error);
+      document.getElementById('statusButton').innerHTML = `
+        <i class="fas fa-times-circle"></i>
+        Something went wrong...
+      `;
+      document.getElementById('statusButton').style.backgroundColor = 'red';
+    }
+  };
+
+  loadShiny();
+
+</script>
